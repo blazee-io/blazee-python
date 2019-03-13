@@ -11,7 +11,6 @@ ipython = "*"
 
 [packages]
 requests = "*"
-joblib = "*"
 sklearn = "*"
 e1839a8 = {editable = true,path = "."}
 blazee = {editable = true,path = "."}

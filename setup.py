@@ -29,9 +29,7 @@ class PyTest(TestCommand):
 
 
 requires = [
-    'joblib',
     'requests',
-
     'scikit-learn'
 ]
 
