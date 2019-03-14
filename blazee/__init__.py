@@ -33,6 +33,10 @@ Usage:
     # Or predict a batch
     >>> preds = model.batch_predict(X)
 """
+__version__ = '0.1.1'
+
 from .client import Client as Blazee
 from .model import BlazeeModel
 from .prediction import Prediction
+
+__all__ = ["Blazee", "BlazeeModel", "Prediction", "__version__"]

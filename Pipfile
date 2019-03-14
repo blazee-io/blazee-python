@@ -8,6 +8,9 @@ autopep8 = "*"
 pytest = "*"
 pylint = "*"
 ipython = "*"
+setuptools = "*"
+wheel = "*"
+twine = "*"
 
 [packages]
 requests = "*"

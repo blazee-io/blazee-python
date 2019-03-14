@@ -5,6 +5,8 @@ blazee.client
 This module provides a Client for interacting with the Blazee API.
 """
 import io
+import logging
+import os
 import pickle
 import uuid
 from datetime import datetime
@@ -12,12 +14,11 @@ from json import dumps as jsondumps
 
 import requests
 from requests.exceptions import HTTPError
-from sklearn.base import BaseEstimator
 
 from blazee.model import BlazeeModel
 from blazee.utils import NumpyEncoder
 
-BLAZEE_HOST = 'https://api.blazee.io/v1'
+DEFAULT_BLAZEE_HOST = 'https://api.blazee.io/v1'
 
 
 class Client:
@@ -27,12 +28,26 @@ class Client:
     ----------
     api_key : string
         Your Blazee API key. Get one at https://blazee.io
+        This can also be set through the BLAZEE_API_KEY environment variable
+
+    host: string
+        The base URL of the Blazee API. Defaults to
+        Blazee production API.
+        This can also be set through the BLAZEE_HOST environment variable
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None, host: str = None):
+        if not host:
+            host = os.environ.get('BLAZEE_HOST')
+            if not host:
+                host = DEFAULT_BLAZEE_HOST
         if not api_key:
-            raise ValueError('API Key must not be empty')
+            api_key = os.environ.get('BLAZEE_API_KEY')
+            if not api_key:
+                raise ValueError('API Key must not be empty')
+
         self.api_key = api_key
+        self.host = host
 
     def all_models(self):
         """Returns a list of all your deployed Blazee models.
@@ -80,7 +95,7 @@ class Client:
             The Blazee model that was deployed, ready to use for
             predictions
         """
-        if isinstance(model, BaseEstimator):
+        if self._is_sklearn(model):
             return self.deploy_sklearn(model, model_name)
         else:
             raise TypeError(f'Model Type not supported: {type(model)}')
@@ -89,7 +104,7 @@ class Client:
         """Deploys a Scikit Learn model
         See `deploy_model()`
         """
-        if not isinstance(model, BaseEstimator):
+        if not self._is_sklearn(model):
             raise TypeError('Model is not a valid Scikit Learn estimator')
 
         model_class = type(model).__name__
@@ -104,6 +119,13 @@ class Client:
                                   model_name=model_name,
                                   model_content=content.getvalue())
 
+    def _is_sklearn(self, model):
+        try:
+            from sklearn.base import BaseEstimator
+            return isinstance(model, BaseEstimator)
+        except:
+            return False
+
     def _create_model(self, type, model_name, model_content):
         response = self._api_call('/models',
                                   method='POST',
@@ -112,16 +134,16 @@ class Client:
                                       'type': type
                                   })
         upload_data = response['upload_data']
-        print(f'Uploading model to Blazee...')
+        logging.info(f'Uploading model to Blazee...')
         upload_resp = requests.post(upload_data['url'],
                                     data=upload_data['fields'],
                                     files={'file': model_content})
         upload_resp.raise_for_status()
 
-        print(f"Successfully deployed model {response['id']}")
+        logging.info(f"Successfully deployed model {response['id']}")
 
         model = BlazeeModel(self, response)
-        print(f"Deploying model... This will take a few moments")
+        logging.info(f"Deploying model... This will take a few moments")
         try:
             self._wait_for_depoyment(model)
         except TimeoutError:
@@ -135,7 +157,7 @@ class Client:
         else:
             data = jsondumps(json, cls=NumpyEncoder)
         resp = requests.request(method=method,
-                                url=f'{BLAZEE_HOST}{path}',
+                                url=f'{self.host}{path}',
                                 data=data,
                                 headers={
                                     'X-Api-Key': self.api_key,
