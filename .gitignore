@@ -28,6 +28,7 @@ wheels/
 *.egg
 MANIFEST
 
+.Ds_Store
 
 # VS Code
 .vscode

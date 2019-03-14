@@ -11,6 +11,7 @@ ipython = "*"
 setuptools = "*"
 wheel = "*"
 twine = "*"
+sphinx = "*"
 
 [packages]
 requests = "*"
