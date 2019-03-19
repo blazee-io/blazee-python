@@ -12,16 +12,15 @@ from sklearn.pipeline import Pipeline
 
 from .conftest import client
 
+# def test_pipeline(client):
+#     data, pipeline = create_test_pipeline()
+#     y = pipeline.predict(data.data)
 
-def test_pipeline(client):
-    data, pipeline = create_test_pipeline()
-    y = pipeline.predict(data.data)
+#     model = client.deploy_model(pipeline)
 
-    model = client.deploy_model(pipeline)
-
-    p = model.predict(data.data[0])
-    assert p.prediction == y[0]
-    assert p.probas == None
+#     p = model.predict(data.data[0])
+#     assert p.prediction == y[0]
+#     assert p.probas == None
 
 
 def create_test_pipeline():

@@ -12,12 +12,14 @@ setuptools = "*"
 wheel = "*"
 twine = "*"
 sphinx = "*"
+responses = "*"
 
 [packages]
 requests = "*"
 sklearn = "*"
 e1839a8 = {editable = true,path = "."}
 blazee = {editable = true,path = "."}
+python-dateutil = "*"
 
 [requires]
 python_version = "3.7"

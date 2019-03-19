@@ -35,7 +35,7 @@ class Prediction:
             self.probas = None
 
     def __repr__(self):
-        return "%s(%r)" % (self.__class__, self.__dict__)
+        return f"<Prediction\n\tprediction={self.prediction}\n\tprobas={self.probas}>"
 
     def __str__(self):
-        return self.__repr__()
+        return f"<Prediction\n\tprediction={self.prediction}\n\tprobas={self.probas}>"

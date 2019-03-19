@@ -32,6 +32,7 @@ class PyTest(TestCommand):
 
 requires = [
     'numpy',
+    'python-dateutil',
     'requests'
 ]
 

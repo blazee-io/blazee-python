@@ -1,26 +1,77 @@
+import uuid
+
 import pytest
+import responses
 from requests.exceptions import HTTPError
-from sklearn.linear_model import LogisticRegressionCV
 
-from blazee.client import Client
-
-from .conftest import client
+from .conftest import client, model_resp
 
 
-def test_deploy_invalid_model(client):
-    with pytest.raises(TypeError):
-        client.deploy_model(object())
-
-
-def test_deploy_sklearn_model(client):
-    clf = LogisticRegressionCV()
-
-    client.deploy_model(clf)
-
-
-def test_invalid_api_key():
-    client = Client('InvalidApiKey')
-    clf = LogisticRegressionCV()
+@responses.activate
+def test_all_models_error(client):
+    responses.add(responses.GET, 'http://test/models',
+                  json=[], status=500)
 
     with pytest.raises(HTTPError):
-        client.deploy_model(clf)
+        client.all_models()
+
+
+@responses.activate
+def test_all_models_empty(client):
+    responses.add(responses.GET, 'http://test/models',
+                  json=[], status=200)
+
+    assert client.all_models() == []
+
+
+@responses.activate
+def test_all_models(client, model_resp):
+    responses.add(responses.GET, 'http://test/models',
+                  json=[
+                      model_resp(with_default=False),
+                      model_resp(with_default=True)
+                  ], status=200)
+
+    models = client.all_models()
+    assert len(models) == 2
+    assert models[0].default_version == None
+    assert models[1].default_version != None
+
+
+def test_get_model_invalid_id(client):
+    with pytest.raises(ValueError):
+        client.get_model('my-id')
+
+
+@responses.activate
+def test_get_model_error(client):
+    model_id = str(uuid.uuid4())
+    responses.add(responses.GET, f'http://test/models/{model_id}',
+                  status=500)
+    with pytest.raises(HTTPError):
+        client.get_model(model_id)
+
+
+@responses.activate
+def test_get_model_missing(client):
+    model_id = str(uuid.uuid4())
+    responses.add(responses.GET, f'http://test/models/{model_id}',
+                  json={
+                      "error": {
+                          "code": "MODEL_NOT_FOUND",
+                          "message": "Model does not exist",
+                          "details": []
+                      }
+                  }, status=404)
+    with pytest.raises(HTTPError):
+        client.get_model(model_id)
+
+
+@responses.activate
+def test_get_model(client, model_resp):
+    model_id = str(uuid.uuid4())
+    responses.add(responses.GET, f'http://test/models/{model_id}',
+                  json=model_resp(True), status=200)
+
+    model = client.get_model(model_id)
+    assert model.default_version != None

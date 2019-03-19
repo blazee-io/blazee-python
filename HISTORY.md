@@ -2,9 +2,14 @@
 
 ## dev
 
+## 0.1.2 (2019-04-19)
+
 ### Improvements
 
 - Allow to set host and api key through environment variables
+- Add support for ModelVersions and updating models
+- Prevent from deploying untrained models and custom estimators
+- Nicer objects **repr**
 
 ## 0.1.1 (2019-04-14)
 

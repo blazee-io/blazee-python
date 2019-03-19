@@ -4,10 +4,8 @@ blazee.client
 
 This module provides a Client for interacting with the Blazee API.
 """
-import io
 import logging
 import os
-import pickle
 import uuid
 from datetime import datetime
 from json import dumps as jsondumps
@@ -15,7 +13,7 @@ from json import dumps as jsondumps
 import requests
 from requests.exceptions import HTTPError
 
-from blazee.model import BlazeeModel
+from blazee.model import BlazeeModel, _serialize_model
 from blazee.utils import NumpyEncoder
 
 DEFAULT_BLAZEE_HOST = 'https://api.blazee.io/v1'
@@ -61,7 +59,7 @@ class Client:
         return [BlazeeModel(self, m) for m in resp]
 
     def get_model(self, model_id):
-        """Returns the Blazee model with the give ID.
+        """Returns the Blazee model with the given ID.
 
         Returns
         -------
@@ -80,7 +78,7 @@ class Client:
         """Deploys a trained ML model on Blazee
         At the moment only Scikit Learn models and pipelines are
         supported.
-        Using another framework? Reach out at support@blazee.io
+        Looking for another framework? Reach out at support@blazee.io
 
         Parameters
         ----------
@@ -95,61 +93,26 @@ class Client:
             The Blazee model that was deployed, ready to use for
             predictions
         """
-        if self._is_sklearn(model):
-            return self.deploy_sklearn(model, model_name)
-        else:
-            raise TypeError(f'Model Type not supported: {type(model)}')
+        model_type, content = _serialize_model(model)
 
-    def deploy_sklearn(self, model, model_name=None):
-        """Deploys a Scikit Learn model
-        See `deploy_model()`
-        """
-        if not self._is_sklearn(model):
-            raise TypeError('Model is not a valid Scikit Learn estimator')
-
-        model_class = type(model).__name__
         if not model_name:
-            model_name = f'{model_class} {datetime.now().isoformat()}'
+            model_name = f'{type(model).__name__} {datetime.now().isoformat()}'
 
-        # Serialize model
-        content = io.BytesIO()
-        pickle.dump(model, content)
+        model = self._create_model('sklearn',
+                                   model_name=model_name,
+                                   model_content=content)
 
-        return self._create_model('sklearn',
-                                  model_name=model_name,
-                                  model_content=content.getvalue())
-
-    def _is_sklearn(self, model):
-        try:
-            from sklearn.base import BaseEstimator
-            return isinstance(model, BaseEstimator)
-        except:
-            return False
+        version = model._upload_version(model_type, content)
+        return version.model
 
     def _create_model(self, type, model_name, model_content):
         response = self._api_call('/models',
                                   method='POST',
                                   json={
-                                      'name': model_name,
-                                      'type': type
+                                      'name': model_name
                                   })
-        upload_data = response['upload_data']
-        logging.info(f'Uploading model to Blazee...')
-        upload_resp = requests.post(upload_data['url'],
-                                    data=upload_data['fields'],
-                                    files={'file': model_content})
-        upload_resp.raise_for_status()
 
-        logging.info(f"Successfully deployed model {response['id']}")
-
-        model = BlazeeModel(self, response)
-        logging.info(f"Deploying model... This will take a few moments")
-        try:
-            self._wait_for_depoyment(model)
-        except TimeoutError:
-            model.delete()
-            raise RuntimeError("Error deploying model")
-        return model
+        return BlazeeModel(self, response)
 
     def _api_call(self, path, method='GET', json=None):
         if json is None:
@@ -180,10 +143,3 @@ class Client:
                 raise HTTPError(error_msg)
             else:
                 return resp.json()
-
-    def _wait_for_depoyment(self, model, wait=5, max_tries=30):
-        for _ in range(max_tries):
-            m = self.get_model(model.id)
-            if m.uploaded:
-                return
-        raise TimeoutError('Deployment timeout')
