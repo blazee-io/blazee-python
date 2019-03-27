@@ -34,8 +34,10 @@ def model_version_resp():
             "id": str(uuid.uuid4()),
             "name": "v1",
             "type": "sklearn",
-            "data": {
-                "class": "LogisticRegressionCV"
+            "meta": {
+                "requirements": {
+                    "scikit-learn": "0.20.3"
+                }
             },
             "deployed": deployed,
             "created_at": datetime.datetime.utcnow().isoformat(),

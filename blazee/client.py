@@ -13,7 +13,7 @@ from json import dumps as jsondumps
 import requests
 from requests.exceptions import HTTPError
 
-from blazee.model import BlazeeModel, _serialize_model
+from blazee.model import BlazeeModel, _get_model_metadata, _serialize_model
 from blazee.utils import NumpyEncoder
 
 DEFAULT_BLAZEE_HOST = 'https://api.blazee.io/v1'
@@ -94,6 +94,7 @@ class Client:
             predictions
         """
         model_type, content = _serialize_model(model)
+        metadata = _get_model_metadata(model)
 
         if not model_name:
             model_name = f'{type(model).__name__} {datetime.now().isoformat()}'
@@ -101,8 +102,13 @@ class Client:
         model = self._create_model('sklearn',
                                    model_name=model_name,
                                    model_content=content)
+        try:
+            version = model._upload_version(model_type, content, metadata)
+        except Exception as e:
+            logging.info('Something wrong happened, deleting model...')
+            model.delete()
+            raise e
 
-        version = model._upload_version(model_type, content)
         return version.model
 
     def _create_model(self, type, model_name, model_content):

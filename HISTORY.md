@@ -10,6 +10,10 @@
 - Add support for ModelVersions and updating models
 - Prevent from deploying untrained models and custom estimators
 - Nicer objects **repr**
+- Delete models if creation or deployment fails
+- Add model metadata with scikit-learn version
+- Auto-refresh of models when being modified
+- Prevent re-using deleted models
 
 ## 0.1.1 (2019-04-14)
 
