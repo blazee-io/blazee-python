@@ -2,6 +2,17 @@
 
 ## dev
 
+### Improvements
+
+## 0.1.3 (2019-04-27)
+
+### Improvements
+
+- Delete models if creation or deployment fails
+- Add model metadata with scikit-learn version
+- Auto-refresh of models when being modified
+- Prevent re-using deleted models
+
 ## 0.1.2 (2019-04-19)
 
 ### Improvements
@@ -10,10 +21,6 @@
 - Add support for ModelVersions and updating models
 - Prevent from deploying untrained models and custom estimators
 - Nicer objects **repr**
-- Delete models if creation or deployment fails
-- Add model metadata with scikit-learn version
-- Auto-refresh of models when being modified
-- Prevent re-using deleted models
 
 ## 0.1.1 (2019-04-14)
 
