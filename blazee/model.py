@@ -19,80 +19,28 @@ Usage:
     # To deploy a new version of the model
     >>> model.update(new_model, default=False)
 """
-import enum
-import io
 import logging
-import pickle
-import uuid
-import zipfile
+import time
 
 import requests
 from dateutil import parser
-from sklearn.pipeline import Pipeline
 
+from blazee.keras_utils import is_keras, serialize_keras
 from blazee.prediction import Prediction
+from blazee.pytorch_utils import is_pytorch, serialize_pytorch
+from blazee.sklearn_utils import is_sklearn, serialize_sklearn
+from blazee.utils import generate_zip, pretty_size
 
 
-class ModelType(enum.Enum):
-    SKLEARN = 'sklearn'
-
-
-def _generate_zip(file_name, content):
-    zipped = io.BytesIO()
-
-    with zipfile.ZipFile(zipped, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zinfo = zipfile.ZipInfo(file_name)
-        zinfo.external_attr = 0o644 << 16  # give read access
-        zf.writestr(zinfo, content)
-
-    return zipped.getvalue()
-
-
-def _serialize_model(model):
-    if _is_sklearn(model):
-        if not type(model).__module__.startswith('sklearn.'):
-            raise TypeError(
-                f'Model of type {type(model)} is not supported. You must use a model or Pipeline that only contains estimators from the Scikit Learn library.')
-
-        if isinstance(model, Pipeline):
-            for name, step in model.steps:
-                if not type(step).__module__.startswith('sklearn.'):
-                    raise TypeError(
-                        f'Pipeline contains step {name} of type {type(step)} which is not supported. You must use a model or Pipeline that only contains estimators from the Scikit Learn library.')
-
-        # Check if model is fitted
-        try:
-            model.predict([0])
-        except Exception as e:
-            from sklearn.exceptions import NotFittedError
-            if isinstance(e, NotFittedError):
-                raise AttributeError("This model hasn't been trained yet")
-
-        content = pickle.dumps(model)
-        zipped = _generate_zip('model.pickle', content)
-        return 'sklearn', zipped
+def _serialize_model(model, include_files=None):
+    if is_sklearn(model):
+        return serialize_sklearn(model, include_files)
+    elif is_keras(model):
+        return serialize_keras(model, include_files)
+    elif is_pytorch(model):
+        return serialize_pytorch(model, include_files)
     else:
         raise TypeError(f'Model Type not supported: {type(model)}')
-
-
-def _get_model_metadata(model):
-    if _is_sklearn(model):
-        import sklearn
-        return {
-            'lib_versions': {
-                'scikit-learn': sklearn.__version__
-            }
-        }
-    else:
-        raise TypeError(f'Model Type not supported: {type(model)}')
-
-
-def _is_sklearn(model):
-    try:
-        from sklearn.base import BaseEstimator
-        return isinstance(model, BaseEstimator)
-    except:
-        return False
 
 
 class BlazeeModel:
@@ -158,7 +106,7 @@ class BlazeeModel:
                               method='DELETE')
         self._deleted = True
 
-    def update(self, model, default=False):
+    def update(self, model, default=False, include_files=None):
         """Creates a new version of this model on Blazee and deploys it.
         Once this is finished, and if the deployment succeeds,
         the new version can be used for predictions.
@@ -167,10 +115,14 @@ class BlazeeModel:
 
         Parameters
         ----------
-        model: `sklearn.base.BaseEstimator`
+        model: one of `sklearn.base.BaseEstimator`, `keras.models.Model`, `torch.nn.Module`
             The model to deploy
         default: `bool`
             Whether or not the new model version should be set as default or not.
+        include_files: `list` of `str`
+            The list of python files this model depends on, if the model depends on
+            custom python code.
+            Those dependencies will be packaged and distributed with the model.
 
         Returns
         -------
@@ -179,10 +131,9 @@ class BlazeeModel:
             predictions
         """
         self._check_deleted()
-        model_type, content = _serialize_model(model)
-        metadata = _get_model_metadata(model)
+        serialized_model = _serialize_model(model, include_files=include_files)
 
-        version = self._upload_version(model_type, content, metadata)
+        version = self._upload_version(serialized_model)
         return version.model
 
     def predict(self, data):
@@ -262,16 +213,18 @@ class BlazeeModel:
     def __str__(self):
         return f"<BlazeeModel '{self.name}'\n\tid={self.id}>"
 
-    def _upload_version(self, model_type, content, metadata):
+    def _upload_version(self, serialized_model):
         resp = self.client._api_call(f'/models/{self.id}/versions',
                                      method="POST",
                                      json={
-                                         'type': model_type,
-                                         'meta': metadata
+                                         'type': serialized_model.type,
+                                         'meta': serialized_model.metadata
                                      })
 
         upload_data = resp['upload_data']
-        logging.info(f'Uploading model version to Blazee...')
+        content = generate_zip(serialized_model.files)
+        logging.info(
+            f'Uploading model version to Blazee  ({pretty_size(len(content))})...')
         upload_resp = requests.post(upload_data['url'],
                                     data=upload_data['fields'],
                                     files={'file': content})
@@ -279,12 +232,28 @@ class BlazeeModel:
 
         version = ModelVersion(self.client, self, resp)
         logging.info(f"Deploying new model version: {version.name}...")
-        deploy_resp = self.client._api_call(
+        self.client._api_call(
             f'/models/{self.id}/versions/{version.id}/deploy',
             method='PATCH')
+        version = self._wait_until_deployed(version)
         logging.info(f"Successfully deployed model version {version.id}")
         self._refresh()
-        return ModelVersion(self.client, self, deploy_resp)
+        return version
+
+    def _wait_until_deployed(self, version, sleep=10, max_retries=30):
+        left = max_retries
+        while left:
+            if version.deployed:
+                return version
+            if version.deployment_error:
+                raise RuntimeError(
+                    "An error occurred while deploying the model")
+            time.sleep(sleep)
+            resp = self.client._api_call(
+                f'/models/{version.model.id}/versions/{version.id}')
+            version = ModelVersion(self.client, self, resp)
+            left -= 1
+        raise TimeoutError("The model was not deployed")
 
 
 class ModelVersion:
@@ -299,6 +268,7 @@ class ModelVersion:
         self.type = response['type']
         self.meta = response['meta']
         self.deployed = response['deployed']
+        self.deployment_error = response['deployment_error']
         self.created_at = parser.parse(response['created_at'])
         self.updated_at = parser.parse(response['updated_at'])
 

@@ -4,7 +4,15 @@
 
 ### Improvements
 
-## 0.1.3 (2019-04-27)
+## 0.1.4 (2019-04-12)
+
+### Improvements
+
+- Added support for PyTorch
+- Added support for Keras
+- Added support for Sklearn KerasClassifier
+
+## 0.1.3 (2019-03-27)
 
 ### Improvements
 
@@ -13,7 +21,7 @@
 - Auto-refresh of models when being modified
 - Prevent re-using deleted models
 
-## 0.1.2 (2019-04-19)
+## 0.1.2 (2019-03-19)
 
 ### Improvements
 
@@ -22,13 +30,13 @@
 - Prevent from deploying untrained models and custom estimators
 - Nicer objects **repr**
 
-## 0.1.1 (2019-04-14)
+## 0.1.1 (2019-03-14)
 
 ### Bug Fixes
 
 - Include numpy as dependency
 
-## 0.1.0 (2019-04-14)
+## 0.1.0 (2019-03-14)
 
 ### Features
 

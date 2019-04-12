@@ -13,7 +13,7 @@ from json import dumps as jsondumps
 import requests
 from requests.exceptions import HTTPError
 
-from blazee.model import BlazeeModel, _get_model_metadata, _serialize_model
+from blazee.model import BlazeeModel, _serialize_model
 from blazee.utils import NumpyEncoder
 
 DEFAULT_BLAZEE_HOST = 'https://api.blazee.io/v1'
@@ -74,18 +74,21 @@ class Client:
 
         return BlazeeModel(self, resp)
 
-    def deploy_model(self, model, model_name=None):
+    def deploy_model(self, model, model_name=None, include_files=None):
         """Deploys a trained ML model on Blazee
-        At the moment only Scikit Learn models and pipelines are
-        supported.
+        At the moment we support Scikit Learn, Keras and PyTorch models.
         Looking for another framework? Reach out at support@blazee.io
 
         Parameters
         ----------
-        model: `sklearn.base.BaseEstimator`
+        model: one of `sklearn.base.BaseEstimator`, `keras.models.Model`, `torch.nn.Module`
             The model to deploy
         model_name: string
             A custom name for the Blazee model
+        include_files: `list` of `str`
+            The list of python files this model depends on, if the model depends on
+            custom python code.
+            Those dependencies will be packaged and distributed with the model.
 
         Returns
         -------
@@ -93,17 +96,14 @@ class Client:
             The Blazee model that was deployed, ready to use for
             predictions
         """
-        model_type, content = _serialize_model(model)
-        metadata = _get_model_metadata(model)
+        serialized_model = _serialize_model(model, include_files=include_files)
 
         if not model_name:
             model_name = f'{type(model).__name__} {datetime.now().isoformat()}'
 
-        model = self._create_model('sklearn',
-                                   model_name=model_name,
-                                   model_content=content)
+        model = self._create_model('sklearn', model_name=model_name)
         try:
-            version = model._upload_version(model_type, content, metadata)
+            version = model._upload_version(serialized_model)
         except Exception as e:
             logging.info('Something wrong happened, deleting model...')
             model.delete()
@@ -111,7 +111,7 @@ class Client:
 
         return version.model
 
-    def _create_model(self, type, model_name, model_content):
+    def _create_model(self, type, model_name):
         response = self._api_call('/models',
                                   method='POST',
                                   json={

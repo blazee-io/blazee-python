@@ -13,10 +13,13 @@ wheel = "*"
 twine = "*"
 sphinx = "*"
 responses = "*"
+keras = "*"
+tensorflow = "*"
+scikit-learn = "*"
+pytorch = "*"
 
 [packages]
 requests = "*"
-sklearn = "*"
 e1839a8 = {editable = true,path = "."}
 blazee = {editable = true,path = "."}
 python-dateutil = "*"

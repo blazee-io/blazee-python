@@ -13,14 +13,18 @@ This library can also be used
 
 ## Supported Frameworks
 
-At the moment, we only support supervised learning Scikit Learn models and pipeline.
+At the moment, we support the following frameworks:
+
+- Scikit Learn (Supervised learning models and pipeline)
+- Keras
+- PyTorch
 
 Coming soon:
 
 - H2O
-- Keras
+- XGBoost
+- LightGBM
 - Tensorflow
-- Scikit Learn Unsupervised learning models
 
 ## Installation
 
@@ -59,6 +63,12 @@ Deploying model... This will take a few moments
 
 # Or predict a batch
 >>> preds = model.batch_predict(X)
+
+# Deploy another version of the model
+>>> clf2 = SGDClassifier()
+>>> ...
+>>> clf2.train(X)
+>>> model.update(clf2)
 ```
 
 ## Support
