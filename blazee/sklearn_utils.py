@@ -24,14 +24,49 @@ def is_sklearn(model):
     return False
 
 
-def _get_model_metadata(model, include_files):
-    deps = ['scikit-learn']
+def _get_estimator_dependencies(estimator):
+    # Keras
     try:
         from keras.wrappers.scikit_learn import BaseWrapper
-        if isinstance(model, BaseWrapper):
-            deps += get_keras_deps()
+        if isinstance(estimator, BaseWrapper):
+            return get_keras_deps()
     except:
         pass
+    # XGBoost
+    try:
+        from xgboost.sklearn import XGBClassifier
+        if isinstance(estimator, XGBClassifier):
+            return ['xgboost']
+    except:
+        pass
+    # LightGBM
+    try:
+        from lightgbm.sklearn import LGBMModel
+        if isinstance(estimator, LGBMModel):
+            return ['lightgbm']
+    except:
+        pass
+
+    return []
+
+
+def _get_model_metadata(model, include_files):
+    deps = ['scikit-learn']
+    from sklearn.pipeline import Pipeline
+    from sklearn.base import BaseEstimator
+    from sklearn.model_selection._search import BaseSearchCV
+
+    # Import other depdendencies if needed
+    if isinstance(model, Pipeline):
+        for _, estimator in model.steps:
+            deps += _get_estimator_dependencies(estimator)
+    elif isinstance(model, BaseSearchCV):
+        deps += _get_estimator_dependencies(model.estimator)
+    elif isinstance(model, BaseEstimator):
+        deps += _get_estimator_dependencies(model)
+    else:
+        raise ValueError(f"Model of type {type(model)} not supported")
+
     if include_files:
         deps += get_files_dependencies(include_files)
 

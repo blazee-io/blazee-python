@@ -26,10 +26,12 @@ import requests
 from dateutil import parser
 
 from blazee.keras_utils import is_keras, serialize_keras
+from blazee.lightgbm_utils import is_lightgbm, serialize_lightgbm
 from blazee.prediction import Prediction
 from blazee.pytorch_utils import is_pytorch, serialize_pytorch
 from blazee.sklearn_utils import is_sklearn, serialize_sklearn
 from blazee.utils import generate_zip, pretty_size
+from blazee.xgboost_utils import is_xgboost, serialize_xgboost
 
 
 def _serialize_model(model, include_files=None):
@@ -39,6 +41,10 @@ def _serialize_model(model, include_files=None):
         return serialize_keras(model, include_files)
     elif is_pytorch(model):
         return serialize_pytorch(model, include_files)
+    elif is_lightgbm(model):
+        return serialize_lightgbm(model, include_files)
+    elif is_xgboost(model):
+        return serialize_xgboost(model, include_files)
     else:
         raise TypeError(f'Model Type not supported: {type(model)}')
 

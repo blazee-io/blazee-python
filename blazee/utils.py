@@ -27,9 +27,9 @@ def pretty_size(num_bytes):
     if num_bytes < 1024:
         return f'{num_bytes} B'
     elif num_bytes < 1024 * 1024:
-        return f'{num_bytes / 1024:1f} KB'
+        return f'{num_bytes / 1024:.1f} KB'
     else:
-        return f'{num_bytes / 1024 / 1024:1f} MB'
+        return f'{num_bytes / 1024 / 1024:.1f} MB'
 
 
 def generate_zip(files):

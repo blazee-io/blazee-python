@@ -4,6 +4,13 @@
 
 ### Improvements
 
+## 0.1.5 (2019-04-13)
+
+### Improvements
+
+- Added support for LightGBM
+- Added support for XGBoost
+
 ## 0.1.4 (2019-04-12)
 
 ### Improvements

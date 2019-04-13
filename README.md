@@ -18,6 +18,8 @@ At the moment, we support the following frameworks:
 - Scikit Learn (Supervised learning models and pipeline)
 - Keras
 - PyTorch
+- XGBoost
+- LightGBM
 
 Coming soon:
 
