@@ -25,6 +25,7 @@ import time
 import requests
 from dateutil import parser
 
+from blazee.fastai_utils import is_fastai, serialize_fastai
 from blazee.keras_utils import is_keras, serialize_keras
 from blazee.lightgbm_utils import is_lightgbm, serialize_lightgbm
 from blazee.prediction import Prediction
@@ -45,6 +46,8 @@ def _serialize_model(model, include_files=None):
         return serialize_lightgbm(model, include_files)
     elif is_xgboost(model):
         return serialize_xgboost(model, include_files)
+    elif is_fastai(model):
+        return serialize_fastai(model, include_files)
     else:
         raise TypeError(f'Model Type not supported: {type(model)}')
 

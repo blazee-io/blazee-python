@@ -19,6 +19,10 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         elif name == 'pandas.core.frame.DataFrame':
             return np.array(obj).tolist()
+        elif name == 'numpy.int64':
+            return int(obj)
+        elif name == 'numpy.float64':
+            return float(obj)
 
         return json.JSONEncoder.default(self, obj)
 

@@ -16,17 +16,16 @@ This library can also be used
 At the moment, we support the following frameworks:
 
 - Scikit Learn (Supervised learning models and pipeline)
-- Keras
-- PyTorch
-- XGBoost
-- LightGBM
+- [Keras](https://keras.io/)
+- [PyTorch](https://pytorch.org/)
+- [XGBoost](https://github.com/dmlc/xgboost)
+- [LightGBM](https://github.com/Microsoft/LightGBM)
+- [Fast.ai](https://www.fast.ai/)
 
 Coming soon:
 
-- H2O
-- XGBoost
-- LightGBM
-- Tensorflow
+- [H2O](https://www.h2o.ai/)
+- [Tensorflow](https://www.tensorflow.org/)
 
 ## Installation
 
